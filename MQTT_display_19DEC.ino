@@ -35,7 +35,7 @@ volatile bool sendingMessage = false;
 
 // APN and MQTT credentials
 const char apn[] = "airtelgprs.com";
-const char broker[] = "35.200.163.26";
+const char broker[] = "34.100.196.132";
 const int brokerPort = 1883;
 
 const char topicTracking[] = "sim7600/nmea";
@@ -112,9 +112,10 @@ String sendData(String command, const int timeout, boolean debug = false) {
 
     return response;
 }
-
 bool setupGPRS() {
     int attempts = 0;
+    unsigned long retryInterval = GPRS_RETRY_INTERVAL;
+    
     while (attempts < MAX_GPRS_ATTEMPTS) {
         SerialUSB.print("GPRS connection attempt ");
         SerialUSB.println(attempts + 1);
@@ -130,10 +131,10 @@ bool setupGPRS() {
         }
 
         attempts++;
-        if (attempts < MAX_GPRS_ATTEMPTS) {
-            SerialUSB.println("GPRS connection failed, retrying...");
-            delay(GPRS_RETRY_INTERVAL);
-        }
+        SerialUSB.println("GPRS connection failed, retrying...");
+        delay(retryInterval);
+
+        retryInterval += 2000; // Increment retry interval dynamically
     }
     
     SerialUSB.println("GPRS connection failed after maximum attempts");
@@ -287,17 +288,11 @@ void setup() {
     SerialUSB.begin(115200);
     Serial1.begin(115200);
     randomSeed(analogRead(0));
-
 if (!display.begin(SSD1306_SWITCHCAPVCC, OLED_CS)) {
         SerialUSB.println(F("OLED initialization failed"));
         while (true);
     }
-     display.clearDisplay();
-    display.setTextSize(1);
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.println("Initializing...");
-    display.display();
+    displayMessage("Initializing...");
 
     pinMode(LTE_RESET_PIN, OUTPUT);
     digitalWrite(LTE_RESET_PIN, LOW);
